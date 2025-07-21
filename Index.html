@@ -10,34 +10,38 @@
 
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script>
-    const peerId = 'usuario'; // mismo ID compartido para que todos se unan
-    const myPeer = new Peer({
-      key: 'peerjs', // usa servidor gratuito por defecto
+    const remoteAudio = document.getElementById('remoteAudio');
+
+    // Cambia esto para distinguir entre host y cliente
+    const isHost = confirm("¿Eres el host?");
+
+    // Si eres el host, usa un ID fijo. Si no, genera uno automáticamente
+    const myPeer = new Peer(isHost ? 'host-id' : undefined, {
       debug: 2
     });
 
-    const remoteAudio = document.getElementById('remoteAudio');
-
     navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(stream => {
-      // Esperar a que el peer esté listo
       myPeer.on('open', id => {
         console.log('Mi ID:', id);
 
-        if (id !== peerId) {
-          // Conectarse al host si no soy el host
-          const call = myPeer.call(peerId, stream);
+        if (!isHost) {
+          // Si no soy el host, llamo al host
+          const call = myPeer.call('host-id', stream);
           call.on('stream', remoteStream => {
             remoteAudio.srcObject = remoteStream;
           });
+
+          call.on('error', err => console.error('Error en la llamada:', err));
         }
       });
 
-      // Si soy el host, acepto llamadas
+      // Si soy el host, contesto las llamadas
       myPeer.on('call', call => {
-        call.answer(stream); // responder con mi audio
+        call.answer(stream);
         call.on('stream', remoteStream => {
           remoteAudio.srcObject = remoteStream;
         });
+        call.on('error', err => console.error('Error al recibir la llamada:', err));
       });
 
     }).catch(err => {
