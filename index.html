@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Llamada P2P WebRTC</title>
+</head>
+<body>
+  <h2>Conectando llamada...</h2>
+  <audio id="remoteAudio" autoplay></audio>
+
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script>
+    const peerId = 'usuario'; // mismo ID compartido para que todos se unan
+    const myPeer = new Peer({
+      key: 'peerjs', // usa servidor gratuito por defecto
+      debug: 2
+    });
+
+    const remoteAudio = document.getElementById('remoteAudio');
+
+    navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(stream => {
+      // Esperar a que el peer esté listo
+      myPeer.on('open', id => {
+        console.log('Mi ID:', id);
+
+        if (id !== peerId) {
+          // Conectarse al host si no soy el host
+          const call = myPeer.call(peerId, stream);
+          call.on('stream', remoteStream => {
+            remoteAudio.srcObject = remoteStream;
+          });
+        }
+      });
+
+      // Si soy el host, acepto llamadas
+      myPeer.on('call', call => {
+        call.answer(stream); // responder con mi audio
+        call.on('stream', remoteStream => {
+          remoteAudio.srcObject = remoteStream;
+        });
+      });
+
+    }).catch(err => {
+      console.error('Error accediendo al micrófono:', err);
+    });
+  </script>
+</body>
+</html>
